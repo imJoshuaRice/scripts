@@ -1,2 +1,2 @@
 # scripts
-A collection of scripts that have proven useful.
+A collection of content I have found useful.
