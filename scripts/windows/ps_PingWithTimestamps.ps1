@@ -1,1 +1,1 @@
-ping 8.8.8.8 -t | ForEach {"{0} - {1}" -f (Get-Date),$_} > PingGoogle.log
+ping 8.8.8.8 -t | ForEach-Object {"{0} - {1}" -f (Get-Date),$_} > "$env:COMPUTERNAME`_PingGoogle.log"
