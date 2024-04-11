@@ -30,7 +30,7 @@ Ref https://pdf-lib.js.org/
 
             const mergedPdf = await PDFLib.PDFDocument.create(); //create PDFDocument using PDFLib
             for (const file of files) {
-                const reader = new FileReader(); //reader definited from FileReader() https://developer.mozilla.org/en-US/docs/Web/API/FileReader
+                const reader = new FileReader(); //reader as defined from FileReader() https://developer.mozilla.org/en-US/docs/Web/API/FileReader
 
                 reader.readAsArrayBuffer(file); //reads in file, ends in a 'result' i.e reader.result
                 await readerLoadPromise(reader); //waits for file to be read before continuing
@@ -44,7 +44,7 @@ Ref https://pdf-lib.js.org/
                 });
             }
 
-            const mergedPdfBytes = await mergedPdf.save(); //save and wait for it to be saved
+            const mergedPdfBytes = await mergedPdf.save(); //mergedPdfBytes defined as the saved/final version of mergedPdf at this point. But await the file to finish saving
             const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });//creates the new file as a pdf type blob
             const blobUrl = URL.createObjectURL(blob);
             window.open(blobUrl);//open in a new window, user can then review and choose to save the file as they see fit
