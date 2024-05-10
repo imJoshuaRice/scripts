@@ -75,7 +75,7 @@
 
  ;; Disable the journal's built-in 'Scheduled tasks and deadlines' query.
  ;; Default value: false
- ;; :feature/disable-scheduled-and-deadline-query? false
+ :feature/disable-scheduled-and-deadline-query? true
 
  ;; Specify the number of days displayed in the future for
  ;; the 'scheduled tasks and deadlines' query.
