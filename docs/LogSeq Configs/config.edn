@@ -200,8 +200,110 @@
  ;; Advanced queries `:result-transform` function.
  ;; Transform the query result before displaying it.
  :query/result-transforms
- {:sort-by-priority
-  (fn [result] (sort-by (fn [h] (get h :block/priority "Z")) result))}
+ {
+        :sort-by-priority (fn [result] (sort-by (fn [h] (get h :block/priority "Z")) result))
+  
+        :add-task-attrs (fn [result]
+    (def months {1 "January" 2 "February"  3 "March" 4 "April" 5 "May" 6 "June" 7 "July" 8 "August" 9 "September" 10 "October" 11 "November" 12 "December"})
+    (def monthName (fn [dd]
+          (get months (int dd))
+         ))
+
+    ;; source: https://discuss.logseq.com/t/add-query-input-or-function-day-of-week/18361/12
+    (def days {0 "Saturday" 1 "Sunday" 2 "Monday" 3 "Tuesday" 4 "Wednesday" 5 "Thursday" 6 "Friday"})
+    (def weekDay (fn [date]
+          (def month (quot (mod date 10000) 100))
+          (def month6 (quot (- month 8) 6))
+          (def year6 (+ (quot date 10000) month6))
+          (def yearnum (mod year6 100))
+          (def century (quot year6 100))
+          (def d (mod (+ (mod date 100) (quot (* 13 (inc (- month (* month6 12)))) 5) yearnum (quot   yearnum 4) 
+          (quot century 4) (* 5 century)) 7))
+          (get days d)
+         ))
+
+    (def suffixes {0 "th" 1 "st" 2 "nd" 3 "rd" 4 "th" 5 "th" 6 "th" 7 "th" 8 "th" 9 "th"})
+    (def positionalSuffix (fn [dd]
+          (if (or (= dd "11") (= dd "12") (= dd "13"))
+            (get suffixes 0)
+            (get suffixes (int (subs dd (count dd) 1))) )
+         ))
+
+    (def token (fn [s] (str "⟨" s "⟩")))
+    (def format
+      (-> (get (js->clj (call-api "get_user_configs")) "preferredDateFormat")
+         (clojure.string/replace "do" (token "1"))
+         (clojure.string/replace "dd" (token "2"))
+         (clojure.string/replace "d" (token "3"))
+         (clojure.string/replace "EEEE" (token "4"))
+         (clojure.string/replace "EEE" (token "5"))
+         (clojure.string/replace "EE" (token "6"))
+         (clojure.string/replace "E" (token "7"))
+         (clojure.string/replace "MMMM" (token "8"))
+         (clojure.string/replace "MMM" (token "9"))
+         (clojure.string/replace "MM" (token "10"))
+         (clojure.string/replace "M" (token "11"))
+         (clojure.string/replace "yyyy" (token "12"))
+         (clojure.string/replace "yy" (token "13"))
+      ))
+
+    (def parseDate (fn [date]
+          (if-not date nil
+            (let [
+                regex (re-pattern "(\\d{4})(\\d{2})(\\d{2})")
+                [_ yyyy mm dd] (re-matches regex (str date))
+                yy (subs yyyy 2 4)
+                d (str (int dd))
+                do (str d (positionalSuffix dd))
+                mmmm (monthName mm)
+                mmm (subs mmmm 0 3)
+                m (str (int mm))
+                eeee (weekDay date)
+                eee (subs eeee 0 3)
+                ee (subs eeee 0 2)
+                e eee
+              ]
+              (-> format
+                (clojure.string/replace (token "1") do)
+                (clojure.string/replace (token "2") dd)
+                (clojure.string/replace (token "3") d)
+                (clojure.string/replace (token "4") eeee)
+                (clojure.string/replace (token "5") eee)
+                (clojure.string/replace (token "6") ee)
+                (clojure.string/replace (token "7") e)
+                (clojure.string/replace (token "8") mmmm)
+                (clojure.string/replace (token "9") mmm)
+                (clojure.string/replace (token "10") mm)
+                (clojure.string/replace (token "11") m)
+                (clojure.string/replace (token "12") yyyy)
+                (clojure.string/replace (token "13") yy)
+              )
+            )
+          )
+         ))
+    (def parseDateRef (fn [date]
+          (if-not date nil
+            (str "[[" (parseDate date) "]]")
+          )
+         ))
+
+
+    (map (fn [x]
+      (update x :block/properties (fn [u]
+        (-> u
+            (assoc :marker (str (get x :block/marker)) )
+            (assoc :priority (str (get x :block/priority)) )
+            (assoc :scheduled (parseDate (get x :block/scheduled)) )
+            (assoc :scheduled-ref (parseDateRef (get x :block/scheduled)) )
+            (assoc :deadline (parseDate (get x :block/deadline)) )
+            (assoc :deadline-ref (parseDateRef (get x :block/deadline)) )
+            (assoc :repeated? (str (get x :block/repeated?)) )
+        )
+      ))
+    )
+    result)
+  )
+  }
 
  ;; The following queries will be displayed at the bottom of today's journal page.
  ;; The "NOW" query returns tasks with "NOW" or "DOING" status.
