@@ -1,0 +1,35 @@
+/* nav buttons on one row, no labels */
+.nav-header {
+    margin-left: 10px;
+}
+
+.nav-header .flex-1 {
+    display: none
+}
+
+.nav-header .item {
+    margin-left: 4px;
+    padding: 4px !important;
+}
+
+.nav-header .ui__icon {
+    margin-right: 0px !important;
+}
+
+/* hide keyboard shortcut hint to fix hover style */
+.nav-header .item .ml-1 {
+    display: none;
+}
+
+.nav-header {
+    flex-direction: row;
+}
+
+#left-sidebar .item>.ti {
+    font-size: 18px;
+    vertical-align: middle;
+}
+
+.tie-whiteboard:before {
+    font-size: 20px;
+}
