@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to PDF Converter</title>
+    <script src="C:\HDITTools\pdf-lib.min.js"></script>
+</head>
+<body>
+    <!-- File input box and button to confirm files selected -->
+    <input type="file" id="fileInput" multiple accept="image/jpeg, image/png">
+    <button onclick="convertImagesToPDF()">Convert Images to PDF</button>
+
+    <script>
+        async function convertImagesToPDF() {
+            const fileInput = document.getElementById('fileInput');
+            const files = Array.from(fileInput.files);
+
+            if (files.length === 0) {
+                alert("Please select at least one image file to convert.");
+                return;
+            }
+
+            const pdfDoc = await PDFLib.PDFDocument.create();
+
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                await new Promise((resolve, reject) => {
+                    reader.onload = () => resolve();
+                    reader.onerror = (error) => reject(error);
+                });
+
+                const img = new Image();
+                img.src = reader.result;
+
+                await new Promise((resolve) => {
+                    img.onload = () => resolve();
+                });
+
+                const page = pdfDoc.addPage([img.width, img.height]);
+                const pngImage = await pdfDoc.embedPng(reader.result);
+                page.drawImage(pngImage, {
+                    x: 0,
+                    y: 0,
+                    width: img.width,
+                    height: img.height,
+                });
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl);
+        }
+    </script>
+</body>
+</html>
