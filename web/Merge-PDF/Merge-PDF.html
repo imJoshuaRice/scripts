@@ -8,46 +8,145 @@ Ref https://pdf-lib.js.org/
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Merge</title>
-        <script src="pdf-lib.min.js"></script>
-
+    <title>PDF Merge with Thumbnails</title>
+    <script src="pdf-lib.min.js"></script>
+    <script src="pdf.min.js"></script>
+    <style>
+        /* Styling for file list and thumbnails */
+        .file-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .file-list li {
+            margin: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            cursor: move;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        .file-list img {
+            width: 100px;
+            height: auto;
+            display: block;
+            margin: 0 auto 5px;
+        }
+    </style>
 </head>
 <body>
-    <!-- File input box and button to confirm files selected -->
+    <!-- File input box and buttons -->
     <input type="file" id="fileInput" multiple>
     <button onclick="mergePDFs()">Merge all PDFs</button>
+    <ul id="fileList" class="file-list"></ul>
 
     <script>
-        async function mergePDFs() {
-            const fileInput = document.getElementById('fileInput'); //targets fileInput input id
-            const files = Array.from(fileInput.files); //array 'files' to store all pdf files
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
 
-            //error condition only one pdf provided
+        fileInput.addEventListener('change', updateFileList);
+
+        async function updateFileList() {
+            fileList.innerHTML = ''; // Clear the list
+            const files = Array.from(fileInput.files);
+            for (const [index, file] of files.entries()) {
+                const listItem = document.createElement('li');
+                listItem.draggable = true;
+                listItem.dataset.index = index;
+                listItem.addEventListener('dragstart', dragStart);
+                listItem.addEventListener('dragover', dragOver);
+                listItem.addEventListener('drop', drop);
+
+                const thumbnail = await renderThumbnail(file);
+                if (thumbnail) {
+                    listItem.appendChild(thumbnail);
+                }
+                listItem.appendChild(document.createTextNode(file.name));
+                fileList.appendChild(listItem);
+            }
+        }
+
+        async function renderThumbnail(file) {
+            const reader = new FileReader();
+            return new Promise((resolve, reject) => {
+                reader.onload = async () => {
+                    const typedArray = new Uint8Array(reader.result);
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    const page = await pdf.getPage(1);
+                    const scale = 0.5;
+                    const viewport = page.getViewport({ scale });
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+
+                    const img = new Image();
+                    img.src = canvas.toDataURL();
+                    resolve(img);
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function dragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.dataset.index);
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const draggedIndex = e.dataTransfer.getData('text/plain');
+            const targetIndex = e.target.closest('li').dataset.index;
+
+            const filesArray = Array.from(fileInput.files);
+            const draggedFile = filesArray.splice(draggedIndex, 1)[0];
+            filesArray.splice(targetIndex, 0, draggedFile);
+
+            const dataTransfer = new DataTransfer();
+            filesArray.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+
+            updateFileList(); // Refresh the displayed list
+        }
+
+        async function mergePDFs() {
+            const files = Array.from(fileInput.files);
             if (files.length < 2) {
                 alert("Select at least two PDF files to merge.");
                 return;
             }
 
             const mergedPdf = await PDFLib.PDFDocument.create(); //create PDFDocument using PDFLib
+
             for (const file of files) {
                 const reader = new FileReader(); //reader as defined from FileReader() https://developer.mozilla.org/en-US/docs/Web/API/FileReader
-
                 reader.readAsArrayBuffer(file); //reads in file, ends in a 'result' i.e reader.result
                 await readerLoadPromise(reader); //waits for file to be read before continuing
 
                 const pdfBytes = new Uint8Array(reader.result);
                 const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes); //pdf-lib load pages from pdfBytes into pdfDoc, can then get each page from first file and add to a new document called mergedPdf
-
                 const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                copiedPages.forEach((page) => {//forEach loop to go through each page and copy it, gets added to mergedPdf
+                copiedPages.forEach((page) => { //forEach loop to go through each page and copy it, gets added to mergedPdf
                     mergedPdf.addPage(page);
                 });
             }
 
             const mergedPdfBytes = await mergedPdf.save(); //mergedPdfBytes defined as the saved/final version of mergedPdf at this point. But await the file to finish saving
-            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });//creates the new file as a pdf type blob
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl);//open in a new window, user can then review and choose to save the file as they see fit
+            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' }); //creates the new file as a pdf type blob
+            const blobUrl = URL.createObjectURL(blob); //open in a new window, user can then review and choose to save the file as they see fit
+            window.open(blobUrl);
         }
 
         function readerLoadPromise(reader) { //in javascript we need to resolve the promise, either the javascript code succeeded (resolved) or failed (reject). Can throw an error at this stage if something broke.
