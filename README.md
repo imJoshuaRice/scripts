@@ -1,4 +1,4 @@
 # untitled
 A collection of content I have found useful.
 
-I moved away from Logseq to Tana so updates to this will probably be quite rare.
+I moved away from Logseq to Tana and now to Capacities, so I am still working out how I will publicise documentation.
